@@ -10,6 +10,8 @@ package com.facebook.react.views.textinput;
 import android.annotation.TargetApi;
 import android.os.Build;
 import android.text.Layout;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.util.TypedValue;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -24,6 +26,7 @@ import com.facebook.react.uimanager.Spacing;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.UIViewOperationQueue;
 import com.facebook.react.uimanager.annotations.ReactProp;
+import com.facebook.react.views.text.CustomLineHeightSpan;
 import com.facebook.react.views.text.ReactBaseTextShadowNode;
 import com.facebook.react.views.text.ReactTextUpdate;
 import com.facebook.react.views.text.ReactTextViewManagerCallback;
@@ -124,6 +127,20 @@ public class ReactTextInputShadowNode extends ReactBaseTextShadowNode
           && editText.getBreakStrategy() != mTextBreakStrategy) {
         editText.setBreakStrategy(mTextBreakStrategy);
       }
+    }
+
+    // Measure something so we have the correct height, taking into consideration
+    // the provided line height.
+    if (!Float.isNaN(mTextAttributes.getEffectiveLineHeight())) {
+      SpannableStringBuilder sb = new SpannableStringBuilder();
+      sb.append("I");
+      sb.setSpan(
+        new CustomLineHeightSpan(mTextAttributes.getEffectiveLineHeight()),
+        0,
+        sb.length(),
+        Spannable.SPAN_EXCLUSIVE_INCLUSIVE
+      );
+      editText.setText(sb);
     }
 
     // make sure the placeholder content is also being measured
