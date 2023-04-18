@@ -932,6 +932,11 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
     view.setBorderStyle(borderStyle);
   }
 
+  @ReactProp(name = "lineHeight")
+  public void setLineHeight(ReactEditText view, @Nullable float lineHeight) {
+    view.setLineHeight(lineHeight);
+  }
+
   @ReactProp(name = "showSoftInputOnFocus", defaultBoolean = true)
   public void showKeyboardOnFocus(ReactEditText view, boolean showKeyboardOnFocus) {
     view.setShowSoftInputOnFocus(showKeyboardOnFocus);

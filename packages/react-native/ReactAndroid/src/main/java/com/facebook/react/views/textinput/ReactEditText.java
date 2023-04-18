@@ -1111,6 +1111,11 @@ public class ReactEditText extends AppCompatEditText
       applyTextAttributes();
     }
   }
+  
+  public void setLineHeight(float lineHeight) {
+    mTextAttributes.setLineHeight(lineHeight);
+    applyTextAttributes();
+  }
 
   public void setAutoFocus(boolean autoFocus) {
     mAutoFocus = autoFocus;
