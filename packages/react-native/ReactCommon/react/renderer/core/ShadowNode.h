@@ -21,8 +21,7 @@
 #include <react/renderer/core/State.h>
 #include <react/renderer/debug/DebugStringConvertible.h>
 
-namespace facebook {
-namespace react {
+namespace facebook::react {
 
 static constexpr const int kShadowNodeChildrenSmallVectorSize = 8;
 
@@ -90,6 +89,8 @@ class ShadowNode : public Sealable,
    */
   ShadowNode(ShadowNode const &shadowNode) noexcept = delete;
   ShadowNode &operator=(ShadowNode const &other) noexcept = delete;
+
+  virtual ~ShadowNode() override = default;
 
   /*
    * Clones the shadow node using stored `cloneFunction`.
@@ -224,5 +225,4 @@ class ShadowNode : public Sealable,
   ShadowNodeTraits traits_;
 };
 
-} // namespace react
-} // namespace facebook
+} // namespace facebook::react

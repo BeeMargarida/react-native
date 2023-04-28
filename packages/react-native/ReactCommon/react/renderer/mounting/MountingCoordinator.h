@@ -8,6 +8,7 @@
 #pragma once
 
 #include <chrono>
+#include <condition_variable>
 #include <optional>
 
 #include <react/renderer/debug/flags.h>
@@ -22,8 +23,7 @@
 #include <react/renderer/mounting/stubs.h>
 #endif
 
-namespace facebook {
-namespace react {
+namespace facebook::react {
 
 /*
  * Stores inside all non-mounted yet revisions of a shadow tree and coordinates
@@ -117,5 +117,4 @@ class MountingCoordinator final {
 #endif
 };
 
-} // namespace react
-} // namespace facebook
+} // namespace facebook::react

@@ -82,7 +82,7 @@ WIN_EXPORT YGNodeRef YGNodeGetParent(YGNodeRef node);
 WIN_EXPORT uint32_t YGNodeGetChildCount(YGNodeRef node);
 WIN_EXPORT void YGNodeSetChildren(
     YGNodeRef owner,
-    const YGNodeRef children[],
+    const YGNodeRef* children,
     uint32_t count);
 
 WIN_EXPORT void YGNodeSetIsReferenceBaseline(
@@ -134,6 +134,10 @@ WIN_EXPORT void YGNodeCopyStyle(YGNodeRef dstNode, YGNodeRef srcNode);
 
 WIN_EXPORT void* YGNodeGetContext(YGNodeRef node);
 WIN_EXPORT void YGNodeSetContext(YGNodeRef node, void* context);
+
+WIN_EXPORT YGConfigRef YGNodeGetConfig(YGNodeRef node);
+WIN_EXPORT void YGNodeSetConfig(YGNodeRef node, YGConfigRef config);
+
 void YGConfigSetPrintTreeFlag(YGConfigRef config, bool enabled);
 bool YGNodeHasMeasureFunc(YGNodeRef node);
 WIN_EXPORT void YGNodeSetMeasureFunc(YGNodeRef node, YGMeasureFunc measureFunc);
@@ -353,6 +357,9 @@ WIN_EXPORT YGConfigRef YGConfigGetDefault(void);
 WIN_EXPORT void YGConfigSetContext(YGConfigRef config, void* context);
 WIN_EXPORT void* YGConfigGetContext(YGConfigRef config);
 
+WIN_EXPORT void YGConfigSetErrata(YGConfigRef config, YGErrata errata);
+WIN_EXPORT YGErrata YGConfigGetErrata(YGConfigRef config);
+
 WIN_EXPORT float YGRoundValueToPixelGrid(
     double value,
     double pointScaleFactor,
@@ -360,17 +367,3 @@ WIN_EXPORT float YGRoundValueToPixelGrid(
     bool forceFloor);
 
 YG_EXTERN_C_END
-
-#ifdef __cplusplus
-
-#include <functional>
-#include <vector>
-
-// Calls f on each node in the tree including the given node argument.
-void YGTraversePreOrder(
-    YGNodeRef node,
-    std::function<void(YGNodeRef node)>&& f);
-
-void YGNodeSetChildren(YGNodeRef owner, const std::vector<YGNodeRef>& children);
-
-#endif

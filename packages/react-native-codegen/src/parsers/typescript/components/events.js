@@ -16,8 +16,10 @@ import type {
   EventTypeAnnotation,
 } from '../../../CodegenSchema.js';
 import type {TypeDeclarationMap} from '../../utils';
+import type {Parser} from '../../parser';
 const {flattenProperties} = require('./componentsUtils');
 const {parseTopLevelType} = require('../parseTopLevelType');
+const {throwIfEventHasNoName} = require('../../error-utils');
 
 function getPropertyType(
   /* $FlowFixMe[missing-local-annot] The type annotation(s) required by Flow's
@@ -86,7 +88,6 @@ function getPropertyType(
           properties: typeAnnotation.members.map(buildPropertiesForEvent),
         },
       };
-
     case 'TSUnionType':
       return {
         name,
@@ -96,6 +97,14 @@ function getPropertyType(
           options: typeAnnotation.types.map(option => option.literal.value),
         },
       };
+    case 'UnsafeMixed':
+      return {
+        name,
+        optional,
+        typeAnnotation: {
+          type: 'MixedTypeAnnotation',
+        },
+      };
     default:
       (type: empty);
       throw new Error(`Unable to determine event type for "${name}": ${type}`);
@@ -103,6 +112,7 @@ function getPropertyType(
 }
 
 function findEventArgumentsAndType(
+  parser: Parser,
   typeAnnotation: $FlowFixMe,
   types: TypeDeclarationMap,
   bubblingType: void | 'direct' | 'bubble',
@@ -128,12 +138,11 @@ function findEventArgumentsAndType(
     };
   }
 
-  if (!typeAnnotation.typeName) {
-    throw new Error("typeAnnotation of event doesn't have a name");
-  }
+  throwIfEventHasNoName(typeAnnotation, parser);
   const name = typeAnnotation.typeName.name;
   if (name === 'Readonly') {
     return findEventArgumentsAndType(
+      parser,
       typeAnnotation.typeParameters.params[0],
       types,
       bubblingType,
@@ -156,6 +165,7 @@ function findEventArgumentsAndType(
         };
       default:
         return findEventArgumentsAndType(
+          parser,
           typeAnnotation.typeParameters.params[0],
           types,
           eventType,
@@ -168,6 +178,7 @@ function findEventArgumentsAndType(
       elementType = elementType.typeAnnotation;
     }
     return findEventArgumentsAndType(
+      parser,
       elementType,
       types,
       bubblingType,
@@ -207,6 +218,7 @@ type EventTypeAST = Object;
 function buildEventSchema(
   types: TypeDeclarationMap,
   property: EventTypeAST,
+  parser: Parser,
 ): EventTypeShape {
   // unpack WithDefault, (T) or T|U
   const topLevelType = parseTopLevelType(
@@ -218,7 +230,7 @@ function buildEventSchema(
   const typeAnnotation = topLevelType.type;
   const optional = property.optional || topLevelType.optional;
   const {argumentProps, bubblingType, paperTopLevelNameDeprecated} =
-    findEventArgumentsAndType(typeAnnotation, types);
+    findEventArgumentsAndType(parser, typeAnnotation, types);
 
   if (!argumentProps) {
     throw new Error(`Unable to determine event arguments for "${name}"`);
@@ -253,8 +265,11 @@ function buildEventSchema(
 function getEvents(
   eventTypeAST: $ReadOnlyArray<EventTypeAST>,
   types: TypeDeclarationMap,
+  parser: Parser,
 ): $ReadOnlyArray<EventTypeShape> {
-  return eventTypeAST.map(property => buildEventSchema(types, property));
+  return eventTypeAST.map(property =>
+    buildEventSchema(types, property, parser),
+  );
 }
 
 module.exports = {

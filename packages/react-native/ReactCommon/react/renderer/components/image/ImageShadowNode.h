@@ -14,8 +14,7 @@
 #include <react/renderer/imagemanager/ImageManager.h>
 #include <react/renderer/imagemanager/primitives.h>
 
-namespace facebook {
-namespace react {
+namespace facebook::react {
 
 extern const char ImageComponentName[];
 
@@ -42,7 +41,7 @@ class ImageShadowNode final : public ConcreteViewShadowNode<
   void setImageManager(const SharedImageManager &imageManager);
 
   static ImageState initialStateData(
-      ShadowNodeFragment const &fragment,
+      Props::Shared const &props,
       ShadowNodeFamilyFragment const &familyFragment,
       ComponentDescriptor const &componentDescriptor) {
     auto imageSource = ImageSource{ImageSource::Type::Invalid};
@@ -61,5 +60,4 @@ class ImageShadowNode final : public ConcreteViewShadowNode<
   void updateStateIfNeeded();
 };
 
-} // namespace react
-} // namespace facebook
+} // namespace facebook::react

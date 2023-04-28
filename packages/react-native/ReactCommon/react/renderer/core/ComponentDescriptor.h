@@ -17,8 +17,7 @@
 #include <react/renderer/graphics/Float.h>
 #include <react/utils/ContextContainer.h>
 
-namespace facebook {
-namespace react {
+namespace facebook::react {
 
 class ComponentDescriptorParameters;
 class ComponentDescriptor;
@@ -122,7 +121,7 @@ class ComponentDescriptor {
    * State's data which can be constructed based on initial Props.
    */
   virtual State::Shared createInitialState(
-      ShadowNodeFragment const &fragment,
+      Props::Shared const &props,
       ShadowNodeFamily::Shared const &family) const = 0;
 
   /*
@@ -158,5 +157,4 @@ class ComponentDescriptorParameters {
   ComponentDescriptor::Flavor flavor;
 };
 
-} // namespace react
-} // namespace facebook
+} // namespace facebook::react
