@@ -18,9 +18,9 @@
 #include <stdbool.h>
 #endif
 
-#include "YGEnums.h"
-#include "YGMacros.h"
-#include "YGValue.h"
+#include <yoga/YGEnums.h>
+#include <yoga/YGMacros.h>
+#include <yoga/YGValue.h>
 
 YG_EXTERN_C_BEGIN
 
@@ -323,8 +323,19 @@ WIN_EXPORT void YGConfigSetPointScaleFactor(
 // resulted in implicit behaviour similar to align-self: stretch; Because this
 // was such a long-standing bug we must allow legacy users to switch back to
 // this behaviour.
-WIN_EXPORT bool YGConfigGetUseLegacyStretchBehaviour(YGConfigRef config);
-WIN_EXPORT void YGConfigSetUseLegacyStretchBehaviour(
+WIN_EXPORT YG_DEPRECATED(
+    "Please use "
+    "\"YGConfigGetErrata()\"") bool YGConfigGetUseLegacyStretchBehaviour(YGConfigRef
+                                                                             config);
+WIN_EXPORT
+YG_DEPRECATED(
+    "\"YGConfigSetUseLegacyStretchBehaviour\" will be removed in the next "
+    "release. Usage should be replaced with \"YGConfigSetErrata(YGErrataAll)\" "
+    "to opt out of all future breaking conformance fixes, or "
+    "\"YGConfigSetErrata(YGErrataStretchFlexBasis)\" to opt out of the "
+    "specific conformance fix previously disabled by "
+    "\"UseLegacyStretchBehaviour\".")
+void YGConfigSetUseLegacyStretchBehaviour(
     YGConfigRef config,
     bool useLegacyStretchBehaviour);
 

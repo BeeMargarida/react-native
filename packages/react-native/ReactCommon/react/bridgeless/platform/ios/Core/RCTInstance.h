@@ -36,8 +36,6 @@ FB_RUNTIME_PROTOCOL
 // TODO (T74233481) - Delete this. Communication between Product Code <> RCTInstance should go through RCTHost.
 @protocol RCTInstanceDelegate <NSObject>
 
-@required
-
 - (std::shared_ptr<facebook::react::ContextContainer>)createContextContainer;
 
 @end
@@ -52,11 +50,6 @@ FB_RUNTIME_PROTOCOL
  * from platform code.
  */
 - (void)callFunctionOnModule:(NSString *)moduleName method:(NSString *)method args:(NSArray *)args;
-
-/**
- * Loads the JS bundle asynchronously.
- */
-- (void)loadScript:(RCTSource *)source;
 
 /**
  * Registers a new JS segment.
@@ -85,10 +78,6 @@ typedef void (^_Null_unspecified RCTInstanceInitialBundleLoadCompletionBlock)();
     FB_OBJC_DIRECT;
 
 - (void)invalidate;
-
-@property (nonatomic, readonly, strong, FB_DIRECT) RCTJSThreadManager *jsThreadManager;
-
-@property (nonatomic, readonly, strong) RCTPerformanceLogger *performanceLogger;
 
 @property (nonatomic, readonly, strong) RCTSurfacePresenter *surfacePresenter;
 

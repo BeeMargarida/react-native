@@ -14,6 +14,7 @@
 #import <React/RCTFabricSurface.h>
 #import <React/RCTJSThread.h>
 #import <React/RCTLog.h>
+#import <React/RCTPerformanceLogger.h>
 #import <React/RCTReloadCommand.h>
 
 using namespace facebook::react;
@@ -21,12 +22,11 @@ using namespace facebook::react;
 NSString *const RCTHostWillReloadNotification = @"RCTHostWillReloadNotification";
 NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
 
-@interface RCTHost () <RCTReloadListener>
+@interface RCTHost () <RCTReloadListener, RCTInstanceDelegate>
 @end
 
 @implementation RCTHost {
   RCTInstance *_instance;
-  __weak id<RCTInstanceDelegate> _instanceDelegate;
   __weak id<RCTHostDelegate> _hostDelegate;
   __weak id<RCTTurboModuleManagerDelegate> _turboModuleManagerDelegate;
   NSURL *_oldDelegateBundleURL;
@@ -55,18 +55,12 @@ NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
  has been expressed.
  */
 - (instancetype)initWithHostDelegate:(id<RCTHostDelegate>)hostDelegate
-                    instanceDelegate:(id<RCTInstanceDelegate>)instanceDelegate
           turboModuleManagerDelegate:(id<RCTTurboModuleManagerDelegate>)turboModuleManagerDelegate
                  bindingsInstallFunc:(facebook::react::ReactInstance::BindingsInstallFunc)bindingsInstallFunc
                  jsErrorHandlingFunc:(JsErrorHandler::JsErrorHandlingFunc)jsErrorHandlingFunc;
 {
-  RCTAssert(
-      hostDelegate && instanceDelegate && turboModuleManagerDelegate,
-      @"RCTHost cannot be instantiated with any nil init params.");
-
   if (self = [super init]) {
     _hostDelegate = hostDelegate;
-    _instanceDelegate = instanceDelegate;
     _turboModuleManagerDelegate = turboModuleManagerDelegate;
     _surfaceStartBuffer = [NSMutableArray new];
     _bundleManager = [RCTBundleManager new];
@@ -154,7 +148,7 @@ NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
   }
   [self _refreshBundleURL];
   RCTReloadCommandSetBundleURL(_bundleURL);
-  _instance = [[RCTInstance alloc] initWithDelegate:_instanceDelegate
+  _instance = [[RCTInstance alloc] initWithDelegate:self
                                    jsEngineInstance:[_hostDelegate getJSEngine]
                                       bundleManager:_bundleManager
                          turboModuleManagerDelegate:_turboModuleManagerDelegate
@@ -191,19 +185,9 @@ NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
   return [self createSurfaceWithModuleName:moduleName mode:DisplayMode::Visible initialProperties:properties];
 }
 
-- (RCTJSThreadManager *)getJSThreadManager
-{
-  return [_instance jsThreadManager];
-}
-
 - (RCTModuleRegistry *)getModuleRegistry
 {
   return _moduleRegistry;
-}
-
-- (RCTPerformanceLogger *)getPerformanceLogger
-{
-  return [_instance performanceLogger];
 }
 
 - (RCTSurfacePresenter *)getSurfacePresenter
@@ -228,7 +212,7 @@ NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
     _surfaceStartBuffer = [NSMutableArray arrayWithArray:[self _getAttachedSurfaces]];
   }
 
-  _instance = [[RCTInstance alloc] initWithDelegate:_instanceDelegate
+  _instance = [[RCTInstance alloc] initWithDelegate:self
                                    jsEngineInstance:[_hostDelegate getJSEngine]
                                       bundleManager:_bundleManager
                          turboModuleManagerDelegate:_turboModuleManagerDelegate
@@ -253,11 +237,6 @@ NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
   [_instance callFunctionOnModule:moduleName method:method args:args];
 }
 
-- (void)loadScript:(RCTSource *)source
-{
-  [_instance loadScript:source];
-}
-
 - (void)registerSegmentWithId:(NSNumber *)segmentId path:(NSString *)path
 {
   [_instance registerSegmentWithId:segmentId path:path];
@@ -266,6 +245,13 @@ NSString *const RCTHostDidReloadNotification = @"RCTHostDidReloadNotification";
 - (void)dealloc
 {
   [_instance invalidate];
+}
+
+#pragma mark - RCTInstanceDelegate
+
+- (std::shared_ptr<facebook::react::ContextContainer>)createContextContainer
+{
+  return [_hostDelegate createContextContainer];
 }
 
 #pragma mark - Private

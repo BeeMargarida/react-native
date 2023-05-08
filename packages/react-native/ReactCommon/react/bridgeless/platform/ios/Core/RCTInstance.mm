@@ -19,7 +19,6 @@
 #import <React/RCTDisplayLink.h>
 #import <React/RCTEventDispatcherProtocol.h>
 #import <React/RCTFollyConvert.h>
-#import <React/RCTJSScriptLoaderModule.h>
 #import <React/RCTJavaScriptLoader.h>
 #import <React/RCTLog.h>
 #import <React/RCTLogBox.h>
@@ -38,7 +37,7 @@
 #import "RCTJSThreadManager.h"
 #import "RCTPerformanceLoggerUtils.h"
 
-#if (RCT_DEV | RCT_ENABLE_LOADING_VIEW) && __has_include(<React/RCTDevLoadingViewProtocol.h>)
+#if RCT_DEV_MENU && __has_include(<React/RCTDevLoadingViewProtocol.h>)
 #import <PikaOptimizationsMacros/PikaOptimizationsMacros.h>
 #import <React/RCTDevLoadingViewProtocol.h>
 #endif
@@ -69,6 +68,7 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
   __weak id<RCTTurboModuleManagerDelegate> _appTMMDelegate;
   __weak id<RCTInstanceDelegate> _delegate;
   RCTSurfacePresenter *_surfacePresenter;
+  RCTPerformanceLogger *_performanceLogger;
   RCTDisplayLink *_displayLink;
   RCTInstanceInitialBundleLoadCompletionBlock _onInitialBundleLoad;
   ReactInstance::BindingsInstallFunc _bindingsInstallFunc;
@@ -76,6 +76,7 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
   JsErrorHandler::JsErrorHandlingFunc _jsErrorHandlingFunc;
   std::mutex _invalidationMutex;
   std::atomic<bool> _valid;
+  RCTJSThreadManager *_jsThreadManager;
 
   // APIs supporting interop with native modules and view managers
   RCTBridgeModuleDecorator *_bridgeModuleDecorator;
@@ -258,12 +259,6 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
 - (void)_attachBridgelessAPIsToModule:(id<RCTTurboModule>)module FB_OBJC_DIRECT
 {
   __weak RCTInstance *weakInstance = self;
-  if ([module respondsToSelector:@selector(setLoadScript:)]) {
-    ((id<RCTJSScriptLoaderModule>)module).loadScript = ^(RCTSource *source) {
-      [weakInstance loadScript:(source)];
-    };
-  }
-
   if ([module respondsToSelector:@selector(setDispatchToJSThread:)]) {
     ((id<RCTJSDispatcherModule>)module).dispatchToJSThread = ^(dispatch_block_t block) {
       __strong __typeof(self) strongSelf = weakInstance;
@@ -302,11 +297,6 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
   }
 }
 
-- (void)loadScript:(RCTSource *)source
-{
-  [self loadScriptFromSource:source];
-}
-
 - (void)registerSegmentWithId:(NSNumber *)segmentId path:(NSString *)path
 {
   if (_valid) {
@@ -318,7 +308,7 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
 
 - (void)loadJSBundle:(NSURL *)sourceURL FB_OBJC_DIRECT
 {
-#if (RCT_DEV | RCT_ENABLE_LOADING_VIEW) && __has_include(<React/RCTDevLoadingViewProtocol.h>)
+#if RCT_DEV_MENU && __has_include(<React/RCTDevLoadingViewProtocol.h>)
   {
     id<RCTDevLoadingViewProtocol> loadingView =
         (id<RCTDevLoadingViewProtocol>)[_turboModuleManager moduleForName:"DevLoadingView"];
@@ -326,7 +316,6 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
   }
 #endif
 
-  __weak RCTPerformanceLogger *weakPerformanceLogger = _performanceLogger;
   __weak __typeof(self) weakSelf = self;
   [RCTJavaScriptLoader loadBundleAtURL:sourceURL
       onProgress:^(RCTLoadingProgress *progressData) {
@@ -335,7 +324,7 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
           return;
         }
 
-#if (RCT_DEV | RCT_ENABLE_LOADING_VIEW) && __has_include(<React/RCTDevLoadingViewProtocol.h>)
+#if RCT_DEV_MENU && __has_include(<React/RCTDevLoadingViewProtocol.h>)
         id<RCTDevLoadingViewProtocol> loadingView =
             (id<RCTDevLoadingViewProtocol>)[strongSelf->_turboModuleManager moduleForName:"DevLoadingView"];
         [loadingView updateProgress:progressData];
@@ -358,7 +347,7 @@ void RCTInstanceSetRuntimeDiagnosticFlags(NSString *flags)
             (RCTDevSettings *)[strongSelf->_turboModuleManager moduleForName:"DevSettings"];
         [strongSelf loadScriptFromSource:source];
         // Set up hot module reloading in Dev only.
-        [weakPerformanceLogger markStopForTag:RCTPLScriptDownload];
+        [strongSelf->_performanceLogger markStopForTag:RCTPLScriptDownload];
         [devSettings setupHMRClientWithBundleURL:sourceURL];
       }];
 }

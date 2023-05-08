@@ -20,7 +20,6 @@ NS_ASSUME_NONNULL_BEGIN
 @class RCTFabricSurface;
 @class RCTJSThreadManager;
 @class RCTModuleRegistry;
-@class RCTPerformanceLogger;
 @protocol RCTInstanceDelegate;
 FB_RUNTIME_PROTOCOL
 @protocol RCTTurboModuleManagerDelegate;
@@ -39,6 +38,7 @@ RCT_EXTERN NSString *const RCTHostDidReloadNotification;
 
 - (std::shared_ptr<facebook::react::JSEngineInstance>)getJSEngine;
 - (NSURL *)getBundleURL;
+- (std::shared_ptr<facebook::react::ContextContainer>)createContextContainer;
 
 @end
 
@@ -50,7 +50,6 @@ RCT_EXTERN NSString *const RCTHostDidReloadNotification;
 @interface RCTHost : NSObject <ReactInstanceForwarding>
 
 - (instancetype)initWithHostDelegate:(id<RCTHostDelegate>)hostDelegate
-                    instanceDelegate:(id<RCTInstanceDelegate>)instanceDelegate
           turboModuleManagerDelegate:(id<RCTTurboModuleManagerDelegate>)turboModuleManagerDelegate
                  bindingsInstallFunc:(facebook::react::ReactInstance::BindingsInstallFunc)bindingsInstallFunc
                  jsErrorHandlingFunc:(facebook::react::JsErrorHandler::JsErrorHandlingFunc)jsErrorHandlingFunc
@@ -70,11 +69,7 @@ RCT_EXTERN NSString *const RCTHostDidReloadNotification;
 - (RCTFabricSurface *)createSurfaceWithModuleName:(NSString *)moduleName
                                 initialProperties:(NSDictionary *)properties FB_OBJC_DIRECT;
 
-- (RCTJSThreadManager *)getJSThreadManager FB_OBJC_DIRECT;
-
 - (RCTModuleRegistry *)getModuleRegistry FB_OBJC_DIRECT;
-
-- (RCTPerformanceLogger *)getPerformanceLogger FB_OBJC_DIRECT;
 
 - (RCTSurfacePresenter *)getSurfacePresenter FB_OBJC_DIRECT;
 
