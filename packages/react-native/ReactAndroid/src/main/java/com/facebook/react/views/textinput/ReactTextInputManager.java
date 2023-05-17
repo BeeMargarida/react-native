@@ -507,7 +507,12 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
 
   @ReactProp(name = "placeholder")
   public void setPlaceholder(ReactEditText view, String placeholder) {
-    view.setHint(placeholder);
+    // @NEW (requires removal of commented code)
+    // Sets the placeholder and then the view will set the hint with
+    // the correct text attributes
+    view.setPlaceholder(placeholder);
+    // view.setHint(placeholder);
+
   }
 
   @ReactProp(name = "placeholderTextColor", customType = "Color")

@@ -11,11 +11,18 @@ import static com.facebook.react.uimanager.UIManagerHelper.getReactContext;
 import static com.facebook.react.views.text.TextAttributeProps.UNSET;
 
 import android.content.Context;
+import android.graphics.BlendMode;
+import android.graphics.BlendModeColorFilter;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.InsetDrawable;
+import android.graphics.drawable.ScaleDrawable;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.RectShape;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
@@ -23,10 +30,12 @@ import android.text.InputType;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.method.KeyListener;
 import android.text.method.QwertyKeyListener;
+import android.text.style.LineHeightSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -46,6 +55,7 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactSoftExceptionLogger;
 import com.facebook.react.common.build.ReactBuildConfig;
 import com.facebook.react.uimanager.FabricViewStateManager;
+import com.facebook.react.uimanager.PixelUtil;
 import com.facebook.react.uimanager.ReactAccessibilityDelegate;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.uimanager.events.EventDispatcher;
@@ -113,6 +123,7 @@ public class ReactEditText extends AppCompatEditText
   private TextAttributes mTextAttributes;
   private boolean mTypefaceDirty = false;
   private @Nullable String mFontFamily = null;
+  private @Nullable String mPlaceholder = null;
   private int mFontWeight = UNSET;
   private int mFontStyle = UNSET;
   private boolean mAutoFocus = false;
@@ -619,10 +630,36 @@ public class ReactEditText extends AppCompatEditText
     // to prevent an (asynchronous) infinite loop.
     mDisableTextDiffing = true;
 
+    // @NEW (required cleanup)
+    // Apply font size and line height to placeholder
+    if (reactTextUpdate.getText().length() == 0 && getText().length() == 0 && mPlaceholder != null) {
+      SpannableStringBuilder hintSpannable = new SpannableStringBuilder(mPlaceholder);
+
+      // @TRY: needs to be different to not apply the background color and other stuff to placeholder
+      int spanFlags = Spannable.SPAN_INCLUSIVE_INCLUSIVE;
+      spanFlags |= Spannable.SPAN_PRIORITY;
+
+      float lineHeight = mTextAttributes.getEffectiveLineHeight();
+      if (!Float.isNaN(lineHeight)) {
+        hintSpannable.setSpan(new CustomLineHeightSpan(lineHeight), 0, hintSpannable.length(), spanFlags);
+      }
+
+      float fontSize = mTextAttributes.getEffectiveFontSize();
+      if (!Float.isNaN(fontSize)) {
+        hintSpannable.setSpan(new ReactAbsoluteSizeSpan((int) fontSize), 0, hintSpannable.length(), spanFlags);
+      }
+
+      setHint(hintSpannable);
+    }
+
     // On some devices, when the text is cleared, buggy keyboards will not clear the composing
     // text so, we have to set text to null, which will clear the currently composing text.
     if (reactTextUpdate.getText().length() == 0) {
-      setText(null);
+      // setText(null);
+
+      // @NEW (required cleanup)
+      // Necessary to avoid flickering on first character
+      getText().replace(0, length(), spannableStringBuilder);
     } else {
       // When we update text, we trigger onChangeText code that will
       // try to update state if the wrapper is available. Temporarily disable
@@ -640,6 +677,30 @@ public class ReactEditText extends AppCompatEditText
     // Update cached spans (in Fabric only).
     updateCachedSpannable();
   }
+
+  // @NEW (ignore)
+  /*public void updateCursor() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      Drawable currentCursor = getTextCursorDrawable();
+      ShapeDrawable cursorDrawable = new ShapeDrawable(new RectShape());
+
+      float lineHeight = mTextAttributes.getEffectiveLineHeight();
+      float fontSize = mTextAttributes.getEffectiveFontSize();
+      if (!Float.isNaN(lineHeight)) {
+        // cursorDrawable.getPaint().setColor(Color.RED);
+        // cursorDrawable.setColorFilter(new BlendModeColorFilter(Color.RED, BlendMode.SRC_IN));
+
+        // cursorDrawable.setIntrinsicWidth(10);
+        // cursorDrawable.setIntrinsicHeight((int) lineHeight);
+        // cursorDrawable.setPadding(0, 0, 0 ,(int) lineHeight / 2);
+
+        cursorDrawable.setBounds(0, 0, 6, (int) lineHeight);
+      }
+
+      setTextCursorDrawable(cursorDrawable);
+
+    }
+  }*/
 
   /**
    * Remove and/or add {@link Spanned.SPAN_EXCLUSIVE_EXCLUSIVE} spans, since they should only exist
@@ -683,10 +744,12 @@ public class ReactEditText extends AppCompatEditText
    * the presence of spans https://github.com/facebook/react-native/issues/35936 (S318090)
    */
   private void stripStyleEquivalentSpans(SpannableStringBuilder sb) {
-    stripSpansOfKind(
+    // @NEW (piece of code to be removed)
+    // Font size needs to be applied
+    /*stripSpansOfKind(
         sb,
         ReactAbsoluteSizeSpan.class,
-        (span) -> span.getSize() == mTextAttributes.getEffectiveFontSize());
+        (span) -> span.getSize() == mTextAttributes.getEffectiveFontSize());*/
 
     stripSpansOfKind(
         sb,
@@ -1059,6 +1122,12 @@ public class ReactEditText extends AppCompatEditText
     applyTextAttributes();
   }
 
+  // @NEW: needs to be set so that later text attributes can be applied to it
+  public void setPlaceholder(String placeholder) {
+    mPlaceholder = placeholder;
+    applyTextAttributes();
+  }
+
   public void setMaxFontSizeMultiplier(float maxFontSizeMultiplier) {
     if (maxFontSizeMultiplier != mTextAttributes.getMaxFontSizeMultiplier()) {
       mTextAttributes.setMaxFontSizeMultiplier(maxFontSizeMultiplier);
@@ -1081,7 +1150,18 @@ public class ReactEditText extends AppCompatEditText
 
     // `getEffectiveFontSize` always returns a value so don't need to check for anything like
     // `Float.NaN`.
-    setTextSize(TypedValue.COMPLEX_UNIT_PX, mTextAttributes.getEffectiveFontSize());
+    
+    // @NEW (required cleanup)
+    // Applies the line height as the font size so that the cursor height
+    // matches the text height
+    float lineHeight = mTextAttributes.getEffectiveLineHeight();
+    float fontSize = mTextAttributes.getEffectiveFontSize();
+    if (!Float.isNaN(lineHeight)) {
+      setTextSize(TypedValue.COMPLEX_UNIT_PX, lineHeight);
+    }
+    else {
+      setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
+    }
 
     float effectiveLetterSpacing = mTextAttributes.getEffectiveLetterSpacing();
     if (!Float.isNaN(effectiveLetterSpacing)) {
@@ -1196,6 +1276,16 @@ public class ReactEditText extends AppCompatEditText
       if (DEBUG_MODE) {
         FLog.e(
             TAG, "onTextChanged[" + getId() + "]: " + s + " " + start + " " + before + " " + count);
+      }
+
+      // @NEW (requires cleanup)
+      // Necessary to apply the text attribute to the spannable for new
+      // arch to avoid flicker of wrong style on the first character before
+      // maybeSetText is called
+      if (mFabricViewStateManager != null && mFabricViewStateManager.hasStateWrapper()) {
+        if (mTextAttributes != null) {
+          addSpansFromStyleAttributes((SpannableStringBuilder) s);
+        }
       }
 
       if (!mIsSettingTextFromJS && mListeners != null) {
